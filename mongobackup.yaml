@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mongodb-backup
+  namespace: default
+spec:
+  schedule: "0 0 * * *"  # Runs daily at midnight UTC
+  successfulJobsHistoryLimit: 3  # Keeps logs of 3 successful jobs
+  failedJobsHistoryLimit: 3      # Keeps logs of 3 failed jobs
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mongodb-backup
+              image: mongo:5.0
+              command:
+                - "/bin/sh"
+                - "-c"
+                - |
+                  # Create dated backup directory
+                  BACKUP_DIR="/backup/mongodb/$(date +\%Y-\%m-\%d)"
+                  mkdir -p "${BACKUP_DIR}"
+                  
+                  # Perform backup with connection timeout
+                  if ! mongodump \
+                    --host=mongodb-service \
+                    --username=${MONGO_USER} \
+                    --password=${MONGO_PASSWORD} \
+                    --authenticationDatabase=admin \
+                    --oplog \
+                    --gzip \
+                    --out="${BACKUP_DIR}" \
+                    --quiet; then
+                    echo "Backup failed!"
+                    exit 1
+                  fi
+                  
+                  # Verify backup contents
+                  if [ ! -d "${BACKUP_DIR}/admin" ] || [ ! -d "${BACKUP_DIR}/mydb" ]; then
+                    echo "Backup verification failed - no database files found"
+                    exit 1
+                  fi
+                  
+                  echo "Backup completed successfully at ${BACKUP_DIR}"
+              env:
+                - name: MONGO_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: mongodb-secret
+                      key: mongo-user
+                - name: MONGO_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: mongodb-secret
+                      key: mongo-password
+              volumeMounts:
+                - name: mongodb-backup-storage  # Changed to dedicated backup volume
+                  mountPath: /backup
+          volumes:
+            - name: mongodb-backup-storage
+              persistentVolumeClaim:
+                claimName: mongodb-backup-pvc  # Use separate PVC for backups
+          restartPolicy: OnFailure
