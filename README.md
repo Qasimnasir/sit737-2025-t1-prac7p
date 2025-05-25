@@ -1,6 +1,4 @@
-Here's a comprehensive README.md file based on the commands you executed:
 
-```markdown
 # MongoDB and Node.js Application Deployment on Minikube
 
 This project demonstrates the deployment of a MongoDB database and a Node.js application on a local Minikube Kubernetes cluster. It includes persistent storage, secrets, services, and a backup solution.
