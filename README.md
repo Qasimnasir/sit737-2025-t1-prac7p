@@ -124,7 +124,6 @@ minikube stop
 
 ## Author
 
-Qasim Nasir
-```
+### Qasim Nasir
 
 This README provides a clear, step-by-step guide for reproducing your Kubernetes deployment, including all the commands you executed and their purpose. It also includes verification steps and troubleshooting tips.
